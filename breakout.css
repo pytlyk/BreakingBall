@@ -1,0 +1,31 @@
+/*******************************/
+/* global document body styles */
+/*******************************/
+
+body {
+        font: 20pt Arial, Helvetica, sans-serif;
+     padding: 0;
+      margin: 0;
+  background: url(images/paving.jpg);
+}
+
+
+
+
+@media screen and (min-width: 0px) {
+  #breakout     { display: block; width: 640px; height: 480px; margin: 1em auto; border: 1px solid #AAA; }
+  #canvas       { display: block; width: 640px; height: 480px; }
+  #instructions { font-size: 8pt; }
+}
+
+@media screen and (min-width: 1200px) {
+  #breakout     { width: 800px; height: 600px; }
+  #canvas       { width: 800px; height: 600px; }
+  #instructions { font-size: 10pt; }
+}
+
+@media screen and (min-width: 1600px) {
+  #breakout     { width: 1024px; height: 768px; }
+  #canvas       { width: 1024px; height: 768px; }
+  #instructions { font-size: 11pt; }
+}
