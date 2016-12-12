@@ -45,3 +45,73 @@ Breakout.Colors = {
 
 
 };
+Breakout.Levels = [
+    
+     { colors: Breakout.Colors.pastel,
+    bricks: [
+      "                              ",
+      "                              ",
+      "  ggGGggGGggGGggGGggGGggGGgg  ",
+      "  bbGGbbGGggGGggGGggGGggGGgg  ",
+      "  bbGGbbGGggGGggGGggGGggGGgg  ",
+      "  bbBBggGGggGGggGGggGGggGGgg  ",
+      "  bbGGbbGGggGGggGGggGGggGGgg ",
+      "  bbGGbbGGggGGggGGggGGggGGgg  ",
+      "  ggGGggbbggGGggBBggGGggGGgg  ",
+      "  ggGGggbbBBGGBBbbggGGggGGgg  ",
+      "  ggGGggbbggBBggBBggGGggGGgg  ",
+      "  ggGGggbbggGGggBBggGGggGGgg  ",
+      "  ggGGggbbggGGggBBggGGggGGgg  ",
+      "  ggGGggGGggGGggGGggBBggGGgg  ",
+      "  ggGGggGGggGGggGGBBGGBBGGgg  ",
+      "  ggGGggGGggGGggGGBBbbBBGGgg  ",
+      "  ggGGggGGggGGggBBggGGggBBgg  ",
+      "  ggGGggGGggGGggBBggGGggBBgg  "
+    ]
+  },
+
+
+  { colors: Breakout.Colors.arkanoid,
+    bricks: [
+      "", "",
+      "          yy      yy          ",
+      "            yy  yy            ",
+      "            yy  yy            ", 
+      "          ssSSssSSss          ",
+      "          ssSSssSSss          ",
+      "        SSsswwsswwssSS        ",
+      "        SSsswwsswwssSS        ",
+      "      ssSSssSSssSSssSSss      ",
+      "      ssSSssSSssSSssSSss      ",
+      "      ss  ssSSssSSss  ss      ",
+      "      ss  ss      ss  ss      ",
+      "      ss  ss      ss  ss      ",
+      "            ss  ss            ",
+      "            ss  ss            ",
+    ]
+  },
+
+  
+
+  { colors: Breakout.Colors.arkanoid,
+    bricks: [
+      "", "",
+      "              ss              ",
+      "          bbBBssggGG          ",
+      "        BBbbWWwwWWGGgg        ",
+      "      bbBBwwWWwwWWwwggGG      ",
+      "      bbBBwwWWwwWWwwggGG      ",
+      "      bbBBwwWWwwWWwwggGG      ",
+      "      ss  ss  ss  ss  ss      ",
+      "              ss              ",
+      "              ss              ",
+      "          oo  oo              ",
+      "          ooOOoo              ",
+      "            OO                "
+    ]
+  }
+
+
+];
+
+
