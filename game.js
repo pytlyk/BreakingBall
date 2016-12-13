@@ -330,6 +330,317 @@ Game = {
   },
 
   //-----------------------------------------------------------------------------
+Math: {
+
+    bound: function(box) {
+      if (box.radius) {
+        box.w      = 2 * box.radius;
+        box.h      = 2 * box.radius;
+        box.left   = box.x - box.radius;
+        box.right  = box.x + box.radius;
+        box.top    = box.y - box.radius;
+        box.bottom = box.y + box.radius;
+      }
+      else {
+        box.left   = box.x;
+        box.right  = box.x + box.w;
+        box.top    = box.y;
+        box.bottom = box.y + box.h;
+      }
+      return box;
+    },
+
+    overlap: function(box1, box2, returnOverlap) {
+      if ((box1.right < box2.left)   ||
+          (box1.left  > box2.right)  ||
+          (box1.top   > box2.bottom) ||
+          (box1.bottom < box2.top)) {
+        return false;
+      }
+      else {
+        if (returnOverlap) {
+          var left   = Math.max(box1.left,  box2.left);
+          var right  = Math.min(box1.right, box2.right);
+          var top    = Math.max(box1.top,   box2.top);
+          var bottom = Math.min(box1.bottom, box2.bottom);
+          return {x: left, y: top, w: right-left, h: bottom-top, left: left, right: right, top: top, bottom: bottom };
+        }
+        else {
+          return true;
+        }
+      }
+    },
+
+    normalize: function(vec, m) {
+      vec.m = this.magnitude(vec.x, vec.y);
+      if (vec.m == 0) {
+        vec.x = vec.y = vec.m = 0;
+      }
+      else {
+        vec.m = vec.m / (m || 1);
+        vec.x = vec.x / vec.m;
+        vec.y = vec.y / vec.m;
+        vec.m = vec.m / vec.m;
+      }
+      return vec; 
+    },
+
+    magnitude: function(x, y) {
+      return Math.sqrt(x*x + y*y);
+    },
+
+    move: function(x, y, dx, dy, dt) {
+      var nx = dx * dt;
+      var ny = dy * dt;
+      return { x: x + nx, y: y + ny, dx: dx, dy: dy, nx: nx, ny: ny };
+    },
+
+    accelerate: function(x, y, dx, dy, accel, dt) {
+      var x2  = x + (dt * dx) + (accel * dt * dt * 0.5);
+      var y2  = y + (dt * dy) + (accel * dt * dt * 0.5);
+      var dx2 = dx + (accel * dt) * (dx > 0 ? 1 : -1);
+      var dy2 = dy + (accel * dt) * (dy > 0 ? 1 : -1);
+      return { nx: (x2-x), ny: (y2-y), x: x2, y: y2, dx: dx2, dy: dy2 };
+    },
+
+    intercept: function(x1, y1, x2, y2, x3, y3, x4, y4, d) {
+      var denom = ((y4-y3) * (x2-x1)) - ((x4-x3) * (y2-y1));
+      if (denom != 0) {
+        var ua = (((x4-x3) * (y1-y3)) - ((y4-y3) * (x1-x3))) / denom;
+        if ((ua >= 0) && (ua <= 1)) {
+          var ub = (((x2-x1) * (y1-y3)) - ((y2-y1) * (x1-x3))) / denom;
+          if ((ub >= 0) && (ub <= 1)) {
+            var x = x1 + (ua * (x2-x1));
+            var y = y1 + (ua * (y2-y1));
+            return { x: x, y: y, d: d};
+          }
+        }
+      }
+      return null;
+    },
+
+    ballIntercept: function(ball, rect, nx, ny) {
+      var pt;
+      if (nx < 0) {
+        pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny, 
+                                 rect.right  + ball.radius, 
+                                 rect.top    - ball.radius, 
+                                 rect.right  + ball.radius, 
+                                 rect.bottom + ball.radius, 
+                                 "right");
+      }
+      else if (nx > 0) {
+        pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny, 
+                                 rect.left   - ball.radius, 
+                                 rect.top    - ball.radius, 
+                                 rect.left   - ball.radius, 
+                                 rect.bottom + ball.radius,
+                                 "left");
+      }
+      if (!pt) {
+        if (ny < 0) {
+          pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny, 
+                                   rect.left   - ball.radius, 
+                                   rect.bottom + ball.radius, 
+                                   rect.right  + ball.radius, 
+                                   rect.bottom + ball.radius,
+                                   "bottom");
+        }
+        else if (ny > 0) {
+          pt = Game.Math.intercept(ball.x, ball.y, ball.x + nx, ball.y + ny, 
+                                   rect.left   - ball.radius, 
+                                   rect.top    - ball.radius, 
+                                   rect.right  + ball.radius, 
+                                   rect.top    - ball.radius,
+                                   "top");
+        }
+      }
+      return pt;
+    }
+
+  },
+
+  //-----------------------------------------------------------------------------
+
+  Runner: {
+
+    initialize: function(id, game, cfg) {
+      this.cfg          = Object.extend(game.Defaults || {}, cfg || {}); // use game defaults (if any) and extend with custom cfg (if any)
+      this.fps          = this.cfg.fps || 60;
+      this.interval     = 1000.0 / this.fps;
+      this.canvas       = $(id);
+      this.bounds       = this.canvas.getBoundingClientRect();
+      this.width        = this.cfg.width  || this.canvas.offsetWidth;
+      this.height       = this.cfg.height || this.canvas.offsetHeight;
+      this.front        = this.canvas;
+      this.front.width  = this.width;
+      this.front.height = this.height;
+      this.front2d      = this.front.getContext('2d');
+      this.addEvents();
+      this.resetStats();
+      this.resize();
+
+      this.game = Object.construct(game, this, this.cfg); // finally construct the game object itself
+
+      if (this.cfg.state)
+        StateMachine.create(Object.extend({target: this.game}, this.cfg.state));
+
+      this.initCanvas();
+    },
+
+    start: function() { // game instance should call runner.start() when its finished initializing and is ready to start the game loop
+      this.lastFrame = Game.timestamp();
+      this.timer     = setInterval(this.loop.bind(this), this.interval);
+    },
+
+    stop: function() {
+      clearInterval(this.timer);
+    },
+
+    loop: function() {
+      this._start  = Game.timestamp(); this.update((this._start - this.lastFrame)/1000.0); // send dt as seconds
+      this._middle = Game.timestamp(); this.draw();
+      this._end    = Game.timestamp();
+      this.updateStats(this._middle - this._start, this._end - this._middle);
+      this.lastFrame = this._start;
+    },
+
+    initCanvas: function() {
+      if (this.game && this.game.initCanvas)
+        this.game.initCanvas(this.front2d);
+    },
+
+    update: function(dt) {
+      this.game.update(dt);
+    },
+
+    draw: function() {
+      this.game.draw(this.front2d);
+      this.drawStats(this.front2d);
+    },
+
+    resetStats: function() {
+      this.stats = {
+        count:  0,
+        fps:    0,
+        update: 0,
+        draw:   0, 
+        frame:  0  // update + draw
+      };
+    },
+
+    updateStats: function(update, draw) {
+      if (this.cfg.stats) {
+        this.stats.update = Math.max(1, update);
+        this.stats.draw   = Math.max(1, draw);
+        this.stats.frame  = this.stats.update + this.stats.draw;
+        this.stats.count  = this.stats.count == this.fps ? 0 : this.stats.count + 1;
+        this.stats.fps    = Math.min(this.fps, 1000 / this.stats.frame);
+      }
+    },
+
+    strings: {
+      frame:  "frame: ",
+      fps:    "fps: ",
+      update: "update: ",
+      draw:   "draw: ",
+      ms:     "ms"  
+    },
+
+    drawStats: function(ctx) {
+      if (this.cfg.stats) {
+        ctx.fillText(this.strings.frame  + Math.round(this.stats.count),                    this.width - 100, this.height - 60);
+        ctx.fillText(this.strings.fps    + Math.round(this.stats.fps),                      this.width - 100, this.height - 50);
+        ctx.fillText(this.strings.update + Math.round(this.stats.update) + this.strings.ms, this.width - 100, this.height - 40);
+        ctx.fillText(this.strings.draw   + Math.round(this.stats.draw)   + this.strings.ms, this.width - 100, this.height - 30);
+      }
+    },
+
+    addEvents: function() {
+      Game.addEvent(document, 'keydown', this.onkeydown.bind(this));
+      Game.addEvent(document, 'keyup',   this.onkeyup.bind(this));
+      Game.addEvent(window,   'resize',  this.onresize.bind(this));
+    },
+
+    onresize: function() {
+      this.stop();
+      if (this.onresizeTimer)
+        clearTimeout(this.onresizeTimer);
+      this.onresizeTimer = setTimeout(this.onresizeend.bind(this), 50); // dont fire resize event until 50ms after user has stopped resizing (avoid flickering)
+    },
+
+    onresizeend: function() {
+      this.resize();
+      this.start();
+    },
+
+    resize: function() {
+      if ((this.width != this.canvas.offsetWidth) || (this.height != this.front.offsetHeight)) {
+        // console.log("CANVAS RESIZED " + this.front.offsetWidth + ", " + this.front.offsetHeight);
+        this.width  = this.front.width  = this.front.offsetWidth;
+        this.height = this.front.height = this.front.offsetHeight;
+        if (this.game && this.game.onresize)
+          this.game.onresize(this.width, this.height);
+        this.initCanvas(); // when canvas is really resized, its state is reset so we need to re-initialize
+      }
+    },
+
+    onkeydown: function(ev) {
+      if (this.game.onkeydown)
+        return this.game.onkeydown(ev.keyCode);
+      else if (this.cfg.keys)
+        return this.onkey(ev.keyCode, 'down');
+    },
+
+    onkeyup: function(ev) {
+      if (this.game.onkeyup)
+        return this.game.onkeyup(ev.keyCode);
+      else if (this.cfg.keys)
+        return this.onkey(ev.keyCode, 'up');
+    },
+
+    onkey: function(keyCode, mode) {
+      var n, k, i, state = this.game.current; // avoid same key event triggering in 2 different states by remembering current state so that even if an earlier keyhandler changes state, the later keyhandler wont kick in.
+      for(n = 0 ; n < this.cfg.keys.length ; n++) {
+        k = this.cfg.keys[n];
+        k.mode = k.mode || 'up';
+        if ((k.key == keyCode) || (k.keys && (k.keys.indexOf(keyCode) >= 0))) {
+          if (!k.state || (k.state == state)) {
+            if (k.mode == mode) {
+              k.action.call(this.game);
+            }
+          }
+        }
+      }
+    },
+
+    storage: function() {
+      try {
+        return this.localStorage = this.localStorage || window.localStorage || {};
+      }
+      catch(e) { // IE localStorage throws exceptions when using non-standard port (e.g. during development)
+        return this.localStorage = {};
+      }
+    },
+
+    alert: function(msg) {
+      this.stop(); // alert blocks thread, so need to stop game loop in order to avoid sending huge dt values to next update
+      result = window.alert(msg);
+      this.start();
+      return result;
+    },
+
+    confirm: function(msg) {
+      this.stop(); // alert blocks thread, so need to stop game loop in order to avoid sending huge dt values to next update
+      result = window.confirm(msg);
+      this.start();
+      return result;
+    }
+
+    //-------------------------------------------------------------------------
+
+  } // Game.Runner
+} // Game
 
 
 
